@@ -28,7 +28,15 @@ import { setTokenBundle, authFetch } from './session';
 //      meet Scanners.<slug>.RoleAccess → bounce.
 //   5. Any terminal failure → window.location = MEMBERS_PORTAL.
 
-const MEMBERS_PORTAL = 'https://members.f2-tech.ai/f2';
+// c/ffeb9be4 (Mike 2026-09-23) — customer-branded scanner hosts must
+// NEVER bounce cross-host to members.f2-tech.ai for auth. Compute the
+// login URL against the CURRENT origin so users land on the branded
+// scanner-hub login with a proper ?next= back to the original path.
+function computeLoginUrl(): string {
+  if (typeof window === 'undefined') return '/login';
+  const nextPath = window.location.pathname + window.location.search + window.location.hash;
+  return `${window.location.origin}/login?next=${encodeURIComponent(nextPath)}`;
+}
 const SCANNER_SLUG = 'f2-compliance-report';
 
 type Phase = 'checking' | 'authenticated' | 'redirecting';
@@ -114,7 +122,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         <p style={{ margin: 0, color: '#9ca3af', fontSize: 13 }}>{msg}</p>
         {phase === 'redirecting' && (
           <p style={{ marginTop: 12, fontSize: 12, color: '#6b7280' }}>
-            If you're not redirected in a moment, <a href={MEMBERS_PORTAL} style={{ color: '#60a5fa' }}>click here</a>.
+            If you're not redirected in a moment, <a href={computeLoginUrl()} style={{ color: '#60a5fa' }}>click here</a>.
           </p>
         )}
       </div>
@@ -211,8 +219,8 @@ function stripSidFromUrl() {
 function bounce(setPhase: (p: Phase) => void, setMsg: (m: string) => void, why: string) {
   setPhase('redirecting');
   setMsg(why);
-  // Short delay so the user sees why they're being bounced.
+  // Same-origin login bounce, never cross-host (c/ffeb9be4).
   setTimeout(() => {
-    window.location.href = MEMBERS_PORTAL;
+    window.location.href = computeLoginUrl();
   }, 900);
 }
