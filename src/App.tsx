@@ -4,6 +4,7 @@ import { Users } from './pages/Users';
 import { CountsByMonth } from './pages/CountsByMonth';
 import { LoginPeriods } from './pages/LoginPeriods';
 import { Employees } from './pages/Employees';
+import { AdminExhibitBFull } from './pages/AdminExhibitBFull';
 import { useBrand } from './api/brand';
 
 // IT-F2-416 c/45a44b0f (Mike answer A on clar a4c24d30, 2026-09-22):
@@ -20,12 +21,17 @@ import { useBrand } from './api/brand';
 // scanner proxy (which routes ANY path under /scans/f2-compliance-
 // report to the SPA — react-router path-based routing would need each
 // path added to the proxy allowlist).
-type TabSlug = 'users' | 'counts-by-month' | 'login-periods' | 'employees';
+type TabSlug = 'users' | 'counts-by-month' | 'login-periods' | 'employees' | 'exhibit-b-full';
 type TabDef = { slug: TabSlug; navLabel: string; element: JSX.Element; hidden?: boolean };
 const TABS: TabDef[] = [
   { slug: 'users',           navLabel: 'Users',           element: <Users /> },
   { slug: 'counts-by-month', navLabel: 'Counts by Month', element: <CountsByMonth /> },
   { slug: 'login-periods',   navLabel: 'Login Periods',   element: <LoginPeriods /> },
+  // c/99b4a765 (Mike 2026-09-23): full admin compliance-report iframed
+  // in — all 36-col NYSE features, TSV / pipe download, view-mode
+  // switching, per-user pro-access toggle. Customer slug flows through
+  // ?customers= via useLockedCustomerSlug.
+  { slug: 'exhibit-b-full',  navLabel: 'Exhibit B (Full)', element: <AdminExhibitBFull /> },
   // c/b00d3cf5 (Mike 2026-09-23): hide Employees for now. Route + component
   // stay wired so a future re-enable is a `hidden: false` flip.
   { slug: 'employees',       navLabel: 'Employees',       element: <Employees />, hidden: true },
