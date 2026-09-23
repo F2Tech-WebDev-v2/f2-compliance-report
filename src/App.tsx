@@ -3,6 +3,7 @@ import { Users } from './pages/Users';
 import { CountsByMonth } from './pages/CountsByMonth';
 import { LoginPeriods } from './pages/LoginPeriods';
 import { Employees } from './pages/Employees';
+import { useBrand } from './api/brand';
 
 // IT-F2-416 c/45a44b0f (Mike answer A on clar a4c24d30, 2026-09-22):
 // standalone spin-out of f2-admin's Angular compliance-report panel.
@@ -25,11 +26,19 @@ const TABS: TabDef[] = [
 ];
 
 export function App() {
+  // c/5f81ecb7 (Mike 2026-09-23) — when loaded on a customer-branded
+  // domain, prefix the title with the customer name so the auditor
+  // sees which customer's report they're looking at. Data scoping is
+  // handled inside each page via useLockedCustomerSlug.
+  const { brand } = useBrand();
+  const brandLabel = brand?.isCustomerBrand && brand?.slug
+    ? `${brand.name || brand.slug} — F2 Compliance Report`
+    : 'F2 Compliance Report';
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <header style={{ background: '#1f2937', padding: '12px 20px', borderBottom: '1px solid #374151', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
         <Link to="/" style={{ fontSize: 16, fontWeight: 700, color: '#f3f4f6', textDecoration: 'none', whiteSpace: 'nowrap' }}>
-          F2 Compliance Report
+          {brandLabel}
         </Link>
         <nav style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 13 }}>
           {TABS.map((t) => (

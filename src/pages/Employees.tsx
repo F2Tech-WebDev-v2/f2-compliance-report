@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { authFetch } from '../auth/session';
 import { env } from '../env';
+import { useLockedCustomerSlug } from '../api/brand';
 
 /**
  * IT-F2-416 c/45a44b0f — Employees tab. Ported from f2-admin's
@@ -27,9 +28,13 @@ type EmployeeRow = {
 };
 
 export function Employees() {
+  const lockedSlug = useLockedCustomerSlug();
   const [rows, setRows] = useState<EmployeeRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // c/5f81ecb7 — on a branded customer domain, use that customer's
+  // slug; F2 default hub stays on 'f2' as before.
+  const customerSlug = lockedSlug || 'f2';
 
   useEffect(() => {
     let cancelled = false;
@@ -37,7 +42,7 @@ export function Employees() {
       setLoading(true);
       setErr(null);
       try {
-        const res = await authFetch(`${env.AUTH_BASE}/rest/admin/agreements/employees?customer=f2`);
+        const res = await authFetch(`${env.AUTH_BASE}/rest/admin/agreements/employees?customer=${encodeURIComponent(customerSlug)}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const body = await res.json();
         if (cancelled) return;
@@ -49,12 +54,12 @@ export function Employees() {
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [customerSlug]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <h2 style={{ margin: 0, fontSize: 18, color: '#e5e7eb' }}>Employees (F2)</h2>
+        <h2 style={{ margin: 0, fontSize: 18, color: '#e5e7eb' }}>Employees ({customerSlug})</h2>
         <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 'auto' }}>
           {loading ? 'Loading…' : `${rows.length} employee${rows.length === 1 ? '' : 's'}`}
         </span>

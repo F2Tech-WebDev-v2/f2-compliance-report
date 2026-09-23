@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { authFetch } from '../auth/session';
 import { env } from '../env';
+import { useLockedCustomerSlug } from '../api/brand';
 
 /**
  * IT-F2-416 c/45a44b0f — Login Periods tab. Ported from f2-admin's
@@ -10,6 +11,7 @@ import { env } from '../env';
  * projects the LAST_LOGIN + EARLIEST_DATE columns.
  */
 export function LoginPeriods() {
+  const lockedSlug = useLockedCustomerSlug();
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -20,7 +22,9 @@ export function LoginPeriods() {
       setLoading(true);
       setErr(null);
       try {
-        const res = await authFetch(`${env.AUTH_BASE}/rest/admin/agreements/exhibit-b`);
+        // c/5f81ecb7 — scope to the branded customer when on a customer domain.
+        const qs = lockedSlug ? `?customer=${encodeURIComponent(lockedSlug)}` : '';
+        const res = await authFetch(`${env.AUTH_BASE}/rest/admin/agreements/exhibit-b${qs}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const body = await res.json();
         const raw: any[] = Array.isArray(body?.rows) ? body.rows : [];
@@ -45,12 +49,17 @@ export function LoginPeriods() {
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [lockedSlug]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <h2 style={{ margin: 0, fontSize: 18, color: '#e5e7eb' }}>Login Periods</h2>
+        {lockedSlug && (
+          <span style={{ fontSize: 12, color: '#9ca3af', marginLeft: 12 }}>
+            Customer: <code style={{ padding: '2px 6px', background: '#0a0e27', border: '1px solid #374151', borderRadius: 3, color: '#e5e7eb' }}>{lockedSlug}</code>
+          </span>
+        )}
         <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 'auto' }}>
           {loading ? 'Loading…' : `${rows.length} user${rows.length === 1 ? '' : 's'}`}
         </span>

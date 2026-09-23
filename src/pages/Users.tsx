@@ -1,20 +1,26 @@
 import { useEffect, useState } from 'react';
 import { authFetch } from '../auth/session';
 import { env } from '../env';
+import { useLockedCustomerSlug } from '../api/brand';
 
 /**
  * IT-F2-416 c/45a44b0f — Users tab. Ported from f2-admin's Angular
  * compliance-report.component.ts (view_mode='users' branch, line
  * ~604). Fetches Exhibit B report via /rest/admin/agreements/exhibit-b
- * and renders the row set as a table. Full NYSE 36-column pipe-
- * delimited grid + CSV export will land in a follow-up commit; this
- * phase gets the data flow + auth + layout working.
+ * and renders the row set as a table.
+ *
+ * c/5f81ecb7 (Mike 2026-09-23): when the SPA is loaded on a customer-
+ * branded domain, hard-lock the customer filter to that customer's
+ * slug (hide the free-text input). On the F2 default hub the input
+ * stays visible for the (all)-customers view.
  */
 export function Users() {
+  const lockedSlug = useLockedCustomerSlug();
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
-  const [customer, setCustomer] = useState<string>('');
+  const [typedCustomer, setTypedCustomer] = useState<string>('');
+  const customer = lockedSlug || typedCustomer;
 
   useEffect(() => {
     let cancelled = false;
@@ -41,16 +47,22 @@ export function Users() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <h2 style={{ margin: 0, fontSize: 18, color: '#e5e7eb' }}>Users</h2>
-        <label style={{ fontSize: 12, color: '#9ca3af', marginLeft: 12 }}>
-          Customer:
-          <input
-            type="text"
-            value={customer}
-            onChange={(e) => setCustomer(e.target.value.trim())}
-            placeholder="(all)"
-            style={{ marginLeft: 6, padding: '4px 8px', background: '#0a0e27', color: '#e5e7eb', border: '1px solid #374151', borderRadius: 4, fontSize: 12 }}
-          />
-        </label>
+        {lockedSlug ? (
+          <span style={{ fontSize: 12, color: '#9ca3af', marginLeft: 12 }}>
+            Customer: <code style={{ padding: '2px 6px', background: '#0a0e27', border: '1px solid #374151', borderRadius: 3, color: '#e5e7eb' }}>{lockedSlug}</code>
+          </span>
+        ) : (
+          <label style={{ fontSize: 12, color: '#9ca3af', marginLeft: 12 }}>
+            Customer:
+            <input
+              type="text"
+              value={typedCustomer}
+              onChange={(e) => setTypedCustomer(e.target.value.trim())}
+              placeholder="(all)"
+              style={{ marginLeft: 6, padding: '4px 8px', background: '#0a0e27', color: '#e5e7eb', border: '1px solid #374151', borderRadius: 4, fontSize: 12 }}
+            />
+          </label>
+        )}
         <span style={{ fontSize: 12, color: '#6b7280', marginLeft: 'auto' }}>
           {loading ? 'Loading…' : `${rows.length} row${rows.length === 1 ? '' : 's'}`}
         </span>

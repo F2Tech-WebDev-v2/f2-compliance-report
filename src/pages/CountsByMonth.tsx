@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { authFetch } from '../auth/session';
 import { env } from '../env';
+import { useLockedCustomerSlug } from '../api/brand';
 
 /**
  * IT-F2-416 c/45a44b0f — Counts by Month tab. Ported from f2-admin's
@@ -9,6 +10,7 @@ import { env } from '../env';
  * yyyy-mm on client-side.
  */
 export function CountsByMonth() {
+  const lockedSlug = useLockedCustomerSlug();
   const [rows, setRows] = useState<{ month: string; total: number; pro: number; non_pro: number }[]>([]);
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -19,7 +21,11 @@ export function CountsByMonth() {
       setLoading(true);
       setErr(null);
       try {
-        const res = await authFetch(`${env.AUTH_BASE}/rest/admin/agreements/exhibit-b`);
+        // c/5f81ecb7 — scope the aggregation to the branded customer's
+        // rows so the counts only show that customer's month totals,
+        // not fleet-wide.
+        const qs = lockedSlug ? `?customer=${encodeURIComponent(lockedSlug)}` : '';
+        const res = await authFetch(`${env.AUTH_BASE}/rest/admin/agreements/exhibit-b${qs}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const body = await res.json();
         const raw: any[] = Array.isArray(body?.rows) ? body.rows : [];
@@ -45,7 +51,7 @@ export function CountsByMonth() {
       }
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [lockedSlug]);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
