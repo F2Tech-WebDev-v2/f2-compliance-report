@@ -16,9 +16,14 @@ const ADMIN_URL_BASE = 'https://admin.f2-tech.ai/admin/compliance-report';
 
 export function AdminExhibitBFull() {
   const lockedSlug = useLockedCustomerSlug();
-  const url = lockedSlug
-    ? `${ADMIN_URL_BASE}?customers=${encodeURIComponent(lockedSlug)}`
-    : ADMIN_URL_BASE;
+  // c/8dee8450 (Mike 2026-09-23) — append ?stroute=1 so the admin app
+  // renders in chromeless / standalone mode (auth.service.ts:283
+  // reads the stroute query param and hides the sidebar + F2 top
+  // title bar). Report content only, no admin chrome bleeding through.
+  const qs = new URLSearchParams();
+  qs.set('stroute', '1');
+  if (lockedSlug) qs.set('customers', lockedSlug);
+  const url = `${ADMIN_URL_BASE}?${qs.toString()}`;
 
   return (
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
