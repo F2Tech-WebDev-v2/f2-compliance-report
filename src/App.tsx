@@ -1,4 +1,5 @@
-import { Routes, Route, Link, NavLink, Navigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Users } from './pages/Users';
 import { CountsByMonth } from './pages/CountsByMonth';
 import { LoginPeriods } from './pages/LoginPeriods';
@@ -12,18 +13,30 @@ import { useBrand } from './api/brand';
 // f2-compliance-review scaffold). Registered as scanner slug
 // `f2-compliance-report` with client=f2.
 //
-// Per-tab claim gating is deliberately NOT wired here — the sibling
-// f2-compliance-review has 15 fine-grained tabs, but this SPA is 4
-// coarser panels all gated by the same Scanners.f2-compliance-report.
-// RoleAccess (admin-only). Add claim keys + hasTabClaim filter here
-// later if Mike wants per-tab gating on this SPA too.
-type TabDef = { path: string; navLabel: string; element: JSX.Element; end?: boolean };
+// IT-F2-423 c/49bd5c92 (Mike 2026-09-23): tab selection is a query
+// parameter (?tab=<slug>) instead of react-router paths. Matches the
+// f2-user-compliance SPA's URL persistence pattern so deep-links +
+// hard-refresh land on the correct tab, and works cleanly behind the
+// scanner proxy (which routes ANY path under /scans/f2-compliance-
+// report to the SPA — react-router path-based routing would need each
+// path added to the proxy allowlist).
+type TabSlug = 'users' | 'counts-by-month' | 'login-periods' | 'employees';
+type TabDef = { slug: TabSlug; navLabel: string; element: JSX.Element };
 const TABS: TabDef[] = [
-  { path: '/',                navLabel: 'Users',           element: <Users />,          end: true },
-  { path: '/counts-by-month', navLabel: 'Counts by Month', element: <CountsByMonth /> },
-  { path: '/login-periods',   navLabel: 'Login Periods',   element: <LoginPeriods /> },
-  { path: '/employees',       navLabel: 'Employees',       element: <Employees /> },
+  { slug: 'users',           navLabel: 'Users',           element: <Users /> },
+  { slug: 'counts-by-month', navLabel: 'Counts by Month', element: <CountsByMonth /> },
+  { slug: 'login-periods',   navLabel: 'Login Periods',   element: <LoginPeriods /> },
+  { slug: 'employees',       navLabel: 'Employees',       element: <Employees /> },
 ];
+const DEFAULT_TAB: TabSlug = 'users';
+
+function readTabFromUrl(): TabSlug {
+  try {
+    const q = new URLSearchParams(window.location.search).get('tab');
+    if (q && TABS.some((t) => t.slug === q)) return q as TabSlug;
+  } catch { /* SSR / test — fall through */ }
+  return DEFAULT_TAB;
+}
 
 export function App() {
   // c/5f81ecb7 (Mike 2026-09-23) — when loaded on a customer-branded
@@ -34,32 +47,57 @@ export function App() {
   const brandLabel = brand?.isCustomerBrand && brand?.slug
     ? `${brand.name || brand.slug} — F2 Compliance Report`
     : 'F2 Compliance Report';
+
+  // c/49bd5c92 — tab state driven by ?tab=<slug>. Reading the initial
+  // value from the URL keeps hard-refresh + deep-links working. When
+  // the tab changes we write it back via replaceState (no history
+  // spam) and dispatch a popstate so the URL bar stays in sync
+  // without a full navigation.
+  const [tab, setTab] = useState<TabSlug>(readTabFromUrl);
+  useEffect(() => {
+    try {
+      const url = new URL(window.location.href);
+      if (tab === DEFAULT_TAB) url.searchParams.delete('tab');
+      else url.searchParams.set('tab', tab);
+      const next = url.pathname + (url.searchParams.toString() ? `?${url.searchParams.toString()}` : '') + url.hash;
+      window.history.replaceState(null, '', next);
+    } catch { /* best-effort */ }
+  }, [tab]);
+  const activeTab = TABS.find((t) => t.slug === tab) || TABS[0];
+
   return (
     <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <header style={{ background: '#1f2937', padding: '12px 20px', borderBottom: '1px solid #374151', display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-        <Link to="/" style={{ fontSize: 16, fontWeight: 700, color: '#f3f4f6', textDecoration: 'none', whiteSpace: 'nowrap' }}>
+        <Link to="/" onClick={() => setTab(DEFAULT_TAB)} style={{ fontSize: 16, fontWeight: 700, color: '#f3f4f6', textDecoration: 'none', whiteSpace: 'nowrap' }}>
           {brandLabel}
         </Link>
         <nav style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 13 }}>
-          {TABS.map((t) => (
-            <NavLink
-              key={t.path}
-              to={t.path}
-              end={t.end}
-              style={({ isActive }) => ({ color: isActive ? '#60a5fa' : '#e5e7eb', textDecoration: 'none' })}
-            >
-              {t.navLabel}
-            </NavLink>
-          ))}
+          {TABS.map((t) => {
+            const isActive = t.slug === tab;
+            return (
+              <button
+                key={t.slug}
+                type="button"
+                onClick={() => setTab(t.slug)}
+                style={{
+                  background: 'transparent',
+                  border: 0,
+                  padding: 0,
+                  fontFamily: 'inherit',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                  color: isActive ? '#60a5fa' : '#e5e7eb',
+                  textDecoration: 'none',
+                }}
+              >
+                {t.navLabel}
+              </button>
+            );
+          })}
         </nav>
       </header>
       <main style={{ flex: 1, padding: '16px 20px', width: '100%', minWidth: 0, minHeight: 0, display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
-        <Routes>
-          {TABS.map((t) => (
-            <Route key={t.path} path={t.path} element={t.element} />
-          ))}
-          <Route path="*" element={<Navigate to="/" replace />} />
-        </Routes>
+        {activeTab.element}
       </main>
       <footer style={{ padding: '12px 20px', textAlign: 'center', fontSize: 12, color: '#6b7280', borderTop: '1px solid #374151' }}>
         F2 Compliance Report — internal use only.
