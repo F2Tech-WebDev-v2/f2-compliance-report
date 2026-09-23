@@ -21,11 +21,16 @@ export function CountsByMonth() {
       setLoading(true);
       setErr(null);
       try {
-        // c/5f81ecb7 — scope the aggregation to the branded customer's
-        // rows so the counts only show that customer's month totals,
-        // not fleet-wide.
-        const qs = lockedSlug ? `?customer=${encodeURIComponent(lockedSlug)}` : '';
-        const res = await authFetch(`${env.AUTH_BASE}/rest/admin/agreements/exhibit-b${qs}`);
+        // c/d013a78c — POST to /rest/user/data-agreements/admin/exhibit-b
+        // with filters in the body; branded customer scope goes in
+        // customers[] per data-agreements.service.ts signature.
+        const filter: any = {};
+        if (lockedSlug) filter.customers = [lockedSlug];
+        const res = await authFetch(`${env.AUTH_BASE}/rest/user/data-agreements/admin/exhibit-b`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(filter),
+        });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const body = await res.json();
         const raw: any[] = Array.isArray(body?.rows) ? body.rows : [];

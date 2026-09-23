@@ -28,8 +28,16 @@ export function Users() {
       setLoading(true);
       setErr(null);
       try {
-        const qs = customer ? `?customer=${encodeURIComponent(customer)}` : '';
-        const res = await authFetch(`${env.AUTH_BASE}/rest/admin/agreements/exhibit-b${qs}`);
+        // c/d013a78c — correct endpoint is
+        // POST /rest/user/data-agreements/admin/exhibit-b with the
+        // filter object in the body (customers[] array).
+        const filter: any = {};
+        if (customer) filter.customers = [customer];
+        const res = await authFetch(`${env.AUTH_BASE}/rest/user/data-agreements/admin/exhibit-b`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(filter),
+        });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const body = await res.json();
         if (cancelled) return;

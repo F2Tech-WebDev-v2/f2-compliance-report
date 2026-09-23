@@ -42,7 +42,8 @@ export function Employees() {
       setLoading(true);
       setErr(null);
       try {
-        const res = await authFetch(`${env.AUTH_BASE}/rest/admin/agreements/employees?customer=${encodeURIComponent(customerSlug)}`);
+        // c/d013a78c — correct path is /rest/user/data-agreements/admin/employees (GET).
+        const res = await authFetch(`${env.AUTH_BASE}/rest/user/data-agreements/admin/employees?customer=${encodeURIComponent(customerSlug)}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const body = await res.json();
         if (cancelled) return;

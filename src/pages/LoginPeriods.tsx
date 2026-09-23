@@ -22,9 +22,15 @@ export function LoginPeriods() {
       setLoading(true);
       setErr(null);
       try {
-        // c/5f81ecb7 — scope to the branded customer when on a customer domain.
-        const qs = lockedSlug ? `?customer=${encodeURIComponent(lockedSlug)}` : '';
-        const res = await authFetch(`${env.AUTH_BASE}/rest/admin/agreements/exhibit-b${qs}`);
+        // c/d013a78c — POST /rest/user/data-agreements/admin/exhibit-b
+        // with filter body (customers[] array).
+        const filter: any = {};
+        if (lockedSlug) filter.customers = [lockedSlug];
+        const res = await authFetch(`${env.AUTH_BASE}/rest/user/data-agreements/admin/exhibit-b`, {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(filter),
+        });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const body = await res.json();
         const raw: any[] = Array.isArray(body?.rows) ? body.rows : [];
