@@ -21,12 +21,14 @@ import { useBrand } from './api/brand';
 // report to the SPA — react-router path-based routing would need each
 // path added to the proxy allowlist).
 type TabSlug = 'users' | 'counts-by-month' | 'login-periods' | 'employees';
-type TabDef = { slug: TabSlug; navLabel: string; element: JSX.Element };
+type TabDef = { slug: TabSlug; navLabel: string; element: JSX.Element; hidden?: boolean };
 const TABS: TabDef[] = [
   { slug: 'users',           navLabel: 'Users',           element: <Users /> },
   { slug: 'counts-by-month', navLabel: 'Counts by Month', element: <CountsByMonth /> },
   { slug: 'login-periods',   navLabel: 'Login Periods',   element: <LoginPeriods /> },
-  { slug: 'employees',       navLabel: 'Employees',       element: <Employees /> },
+  // c/b00d3cf5 (Mike 2026-09-23): hide Employees for now. Route + component
+  // stay wired so a future re-enable is a `hidden: false` flip.
+  { slug: 'employees',       navLabel: 'Employees',       element: <Employees />, hidden: true },
 ];
 const DEFAULT_TAB: TabSlug = 'users';
 
@@ -72,7 +74,7 @@ export function App() {
           {brandLabel}
         </Link>
         <nav style={{ display: 'flex', gap: 12, flexWrap: 'wrap', fontSize: 13 }}>
-          {TABS.map((t) => {
+          {TABS.filter((t) => !t.hidden).map((t) => {
             const isActive = t.slug === tab;
             return (
               <button
